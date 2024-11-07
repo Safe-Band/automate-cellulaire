@@ -166,7 +166,6 @@ class AutomateCellulaire:
                 
                 button_width, button_height = 200, 50
                 button_x = self.SCREEN_WIDTH // 2 - button_width // 2
-                button_y = self.SCREEN_HEIGHT - button_height - 50
                 # Event handling
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -182,6 +181,7 @@ class AutomateCellulaire:
                 clock.tick(50)  # Adjust tick speed to avoid excessive refresh
 
     def setup_grille(self, fenetre):
+        print("hello")
         running = True
         mouse_held = False  # Track if the mouse button is held down
 
