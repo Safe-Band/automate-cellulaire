@@ -6,17 +6,26 @@ image_tomate = pygame.image.load('./images/auTOMATE.png')
 image_tomate2 = pygame.image.load('./images/auTOMATE2.png')
 image_tomate = pygame.transform.scale(image_tomate, (50, 50))
 
+image_tomate = pygame.image.load('./images/auTOMATE.png')
+image_tomate2 = pygame.image.load('./images/auTOMATE2.png')
+image_tomate = pygame.transform.scale(image_tomate, (50, 50))
+
 class Cellule:
+    def __init__(self, x, y, taille, etat=False):
     def __init__(self, x, y, taille, etat=False):
         self.x = x
         self.y = y
         self.etat = etat
         self.image = pygame.transform.scale(random.choice([image_tomate, image_tomate2]), (taille, taille))
+        self.etat = etat
+        self.image = pygame.transform.scale(random.choice([image_tomate, image_tomate2]), (taille, taille))
 
 class Grille:
     def __init__(self, largeur, hauteur, taille):
+    def __init__(self, largeur, hauteur, taille):
         self.largeur = largeur
         self.hauteur = hauteur
+        self.grille = [[Cellule(x, y, taille) for x in range(largeur)] for y in range(hauteur)]
         self.grille = [[Cellule(x, y, taille) for x in range(largeur)] for y in range(hauteur)]
 
     def cellule(self, x, y):
@@ -28,6 +37,8 @@ class Grille:
                 for dy in [-1, 0, 1] 
                 if (dx != 0 or dy != 0) and 0 <= x + dx < self.largeur and 0 <= y + dy < self.hauteur]
 
+    def appliquer_regles(self, taille):
+        nouvelle_grille = [[Cellule(x, y, taille, cell.etat) for x, cell in enumerate(cells)] for y, cells in enumerate(self.grille)]
     def appliquer_regles(self, taille):
         nouvelle_grille = [[Cellule(x, y, taille, cell.etat) for x, cell in enumerate(cells)] for y, cells in enumerate(self.grille)]
         for cells in self.grille:
@@ -48,6 +59,7 @@ class Grille:
                 if cell.etat:
                     fenetre.fill((255, 255, 255), (cell.x * TAILLE_CELLULE, cell.y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE))
                     fenetre.blit(cell.image, (cell.x * TAILLE_CELLULE, cell.y * TAILLE_CELLULE))
+                    pygame.draw.rect(fenetre, (200, 200, 200), (cell.x * TAILLE_CELLULE, cell.y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE), 1)
                     pygame.draw.rect(fenetre, (200, 200, 200), (cell.x * TAILLE_CELLULE, cell.y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE), 1)
                 else:
                     pygame.draw.rect(fenetre, (255, 255, 255), (cell.x * TAILLE_CELLULE, cell.y * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE))
