@@ -2,8 +2,8 @@ import pygame
 import sys
 import random
 
-LARGEUR_FENETRE = 600*2
-HAUTEUR_FENETRE = 600*2
+LARGEUR_FENETRE = 100
+HAUTEUR_FENETRE = 100
 TAILLE_CELLULE = 75
 
 image_tomate = pygame.image.load('./images/auTOMATE.png')  # Charger l'image de la tomate
@@ -172,4 +172,5 @@ class AutomateCellulaire:
             pygame.display.update()
 
             clock.tick(10)  # Limiter la vitesse du jeu (10 itérations par seconde)
+
 

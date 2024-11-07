@@ -8,7 +8,8 @@ from CellularObjects import Cellule, Grille, AutomateCellulaire
 
 
 def main():
-    AutomateCellulaire(20, 20).jouer(100, "random")
+    jeu = AutomateCellulaire(30, 30)
+    jeu.jouer(100, "random")
 
 
 
