@@ -1,0 +1,348 @@
+""" Behavorial part for the crowd simulation
+
+This module contains the classes and functions that are used to simulate the crowd behavior.
+
+A simulation includes a map and a list of players that are on the map.
+Players have there own behavior rules and are meant to interact with each other.
+
+Creation date : 14 november 2024
+Last update : 14 november 2024  
+
+"""
+
+import pygame as pg
+import numpy as np
+import random
+import sys
+import math
+from enum import Enum
+
+image_tomate = pg.image.load('./images/auTOMATE.png')
+image_tomate2 = pg.image.load('./images/auTOMATE2.png')
+image_tomate = pg.transform.scale(image_tomate, (50, 50))
+image_tomate2 = pg.transform.scale(image_tomate2, (50, 50))
+
+class ACTIONS(Enum):
+    ADDING_PLAYERS = 1
+    ADDING_WALLS = 2
+    ADDING_DOORS = 3
+    
+class TYPE_CELL(Enum):
+        VIDE = 0
+        MUR = 1
+        PORTE = 2
+        OCCUPED = 3
+        
+class Cell:
+    
+    def __init__(self, x, y, taille, grille, is_alive=TYPE_CELL.VIDE):
+        self.x = x
+        self.y = y
+        self.taille = taille
+        self.grille = grille
+        self.distance = math.sqrt((grille.x0 - x)**2 + (grille.y0 - y)**2)
+        self.current_state = TYPE_CELL.VIDE
+        self.player = None
+        
+    def regles_de_comportement(self, voisins):
+        nb_voisins_vivants = sum([voisin.current_state for voisin in voisins])
+        if self.current_state:
+            if nb_voisins_vivants < 2 or nb_voisins_vivants > 3:
+                self.next_state = False
+        else:
+            if nb_voisins_vivants == 3:
+                self.next_state = True
+    
+    def empty(self):
+        self.current_state = TYPE_CELL.VIDE
+        self.joueur = None
+        
+    def set_wall(self):
+        if self.current_state == TYPE_CELL.OCCUPED:
+            self.empty()
+        self.current_state = TYPE_CELL.MUR
+    
+    def set_door(self):
+        if self.current_state == TYPE_CELL.OCCUPED:
+            self.empty()
+        self.current_state = TYPE_CELL.PORTE
+        
+    def is_occuped(self):
+        return self.current_state == TYPE_CELL.OCCUPED
+    
+    def is_empty(self):
+        return self.current_state == TYPE_CELL.VIDE
+    
+    def is_wall(self):
+        return self.current_state == TYPE_CELL.MUR
+    
+    def is_door(self):
+        return self.current_state == TYPE_CELL.PORTE
+        
+    def draw(self, fenetre: pg.Surface):
+        match self.current_state:
+            case TYPE_CELL.OCCUPED:
+                fenetre.fill((255, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                fenetre.blit(self.player.image, (self.x * self.taille, self.y * self.taille))
+                pg.draw.rect(fenetre, (200, 200, 200), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
+            case TYPE_CELL.VIDE:
+                pg.draw.rect(fenetre, (255, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                pg.draw.rect(fenetre, (200, 200, 200), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
+            case TYPE_CELL.MUR:
+                pg.draw.rect(fenetre, (0, 0, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+            case TYPE_CELL.PORTE:
+                pg.draw.rect(fenetre, (165, 42, 42), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+    
+    def highlight(self, fenetre: pg.Surface):
+        pg.draw.rect(fenetre, (0, 100, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
+                
+    def pass_epoch(self):
+        pass
+        
+        
+  
+class Grille:
+    
+    def __init__(self,x0, y0, porte,fenetre, mur=None, nb_colonnes = 30, nb_lignes = 60):
+        
+        screen_info = pg.display.Info()
+        self.SCREEN_WIDTH = screen_info.current_w
+        self.SCREEN_HEIGHT = screen_info.current_h
+        self.fenetre = fenetre
+        
+        self.nb_colonnes = nb_colonnes
+        self.nb_lignes = nb_lignes
+        self.x0 = x0
+        self.y0 = y0
+        self.taille_cellule = min(self.SCREEN_WIDTH // nb_colonnes, self.SCREEN_HEIGHT // nb_lignes)
+        
+        self.grille = [[Cell(x, y, self.taille_cellule,self) for x in range(nb_colonnes)] for y in range(nb_lignes)]
+        self.players = []
+        
+        mur = [(x, 0) for x in range(nb_colonnes)] \
+        + [(x, nb_lignes - 1) for x in range(nb_colonnes)] \
+        + [(0, y) for y in range(nb_lignes)] \
+        + [(nb_colonnes - 1, y) for y in range(nb_lignes)]
+        
+        for (x, y) in mur:
+            self.grille[y][x].current_state = TYPE_CELL.MUR
+        for (x, y) in porte:
+            self.grille[y][x].current_state = TYPE_CELL.PORTE
+
+    def cellule(self, x, y) -> Cell:
+        return self.grille[y][x]
+    
+    def ajouter_mur(self, x, y):
+        cell = self.cellule(x, y)
+        if cell.is_occuped():
+            self.players.remove(cell.player)
+            del cell.player
+            cell.empty()
+        cell.set_wall()
+
+    def ajouter_porte(self, x, y):
+        cell = self.cellule(x, y)
+        if cell.is_occuped():
+            self.players.remove(cell.player)
+            del cell.player
+            cell.empty()
+        cell.set_door()
+        
+    def add_player(self, x, y):
+        cell = self.cellule(x, y)
+        if cell.current_state == TYPE_CELL.VIDE:
+            cell.current_state = TYPE_CELL.OCCUPED
+            player = Player(cell)
+            cell.player = player
+            self.players.append(player)
+    
+    def get_cellules(self):
+        return [cell for cells in self.grille for cell in cells]
+
+    def recuperer_voisins(self, x, y):
+        voisin_positions = [
+                    (x, y - 1),
+                    (x, y + 1),
+                    (x - 1, y),
+                    (x + 1, y),
+                ]
+        voisins = [
+            self.cellule(x, y) for x, y in voisin_positions if 0 <= x < self.nb_colonnes and 0 <= y < self.nb_lignes
+        ]
+        return voisins
+
+    def draw(self, fenetre):
+        pass
+   
+        
+class Player:
+    
+    def __init__(self, cell: Cell):
+        self.current_cell = cell
+        self.grille: Grille = cell.grille
+        self.image = pg.transform.scale(random.choice([image_tomate, image_tomate2]), (self.current_cell.taille, self.current_cell.taille))
+        
+        self.is_arrived = False
+        
+        self.current_cell.player = self
+        
+    def move(self, cell: Cell):
+        self.current_cell.empty()
+        self.current_cell = cell
+        cell.player = self 
+        cell.current_state = TYPE_CELL.OCCUPED
+        
+    def apply_rules(self, eta):
+        # Obtenir une liste des cellules actives et la mélanger aléatoirement
+        # active_cells = [cell for row in self.grille for cell in row if cell.etat]
+        # random.shuffle(active_cells)
+        # Mettre à jour les états des cellules actives
+        # for cell in active_cells:
+        # Positions voisines : haut, bas, gauche, droite, et la position actuelle
+        voisins = self.grille.recuperer_voisins(self.current_cell.x, self.current_cell.y)
+
+        # Conserver uniquement les positions valides
+        voisins_valides = [voisin for voisin in voisins if voisin.is_empty() or voisin.is_door()]
+        # for voisin in voisins:
+        #     voisin.highlight(self.grille.fenetre)
+        # pg.display.update()
+        voisins_valides += [self.current_cell]
+
+        # Calcul des distances pour les positions valides
+        H = np.array([ voisin.distance for voisin in voisins_valides])
+
+        # Calcul des poids avec une distribution de Boltzmann
+        W = np.exp(-eta * H)
+        W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
+
+        # Choix de la position en fonction de la distribution de probabilités
+        chosen_index = np.random.choice(len(W), p=W)
+        chosen_cell = voisins_valides[chosen_index]
+
+        # Activer la cellule choisie
+        if chosen_cell == self.current_cell:
+            pass
+        elif chosen_cell.current_state == TYPE_CELL.PORTE:
+            self.is_arrived = True
+            self.current_cell.empty()
+            self.current_cell = None
+        elif chosen_cell.current_state == TYPE_CELL.VIDE:
+            self.move(chosen_cell)
+        
+        
+        
+
+class Simulation():
+        
+    def __init__(self, fenetre: pg.Surface = None):
+        self.fenetre = fenetre
+        screen_info = pg.display.Info()
+        self.SCREEN_WIDTH = screen_info.current_w
+        self.SCREEN_HEIGHT =  screen_info.current_h
+        
+        nb_colonnes = 60
+        nb_lignes = 30
+        porte = [(nb_colonnes // 2, nb_lignes - 1), (nb_colonnes // 2 + 1, nb_lignes - 1), (nb_colonnes // 2 - 1, nb_lignes - 1)]
+        self.map = Grille(
+            nb_colonnes=nb_colonnes, 
+            nb_lignes=nb_lignes,
+            x0=nb_colonnes // 2,
+            y0=nb_lignes,
+            porte=porte,
+            fenetre=fenetre
+            )
+        self.cells = self.map.get_cellules()
+        
+    def random_setup(self):
+        for cell in self.cells:
+            if random.random() < 0.3:
+                self.map.add_player(cell.x, cell.y)
+            if random.random() < 0.1:
+                cell.set_wall()
+        
+    def choice_setup(self):
+        running = True
+        mouse_held = False  # Track if the mouse button is held down
+        
+        def add(x,y,action):
+            if x >= self.map.nb_colonnes or y >= self.map.nb_lignes:
+                return
+            cell = self.map.cellule(x, y)
+            match action:
+                case ACTIONS.ADDING_WALLS:
+                    self.map.ajouter_mur(x, y)
+                case ACTIONS.ADDING_DOORS:
+                    self.map.ajouter_porte(x, y)
+                case ACTIONS.ADDING_PLAYERS:
+                    self.map.add_player(x, y)
+            cell.draw(self.fenetre)
+                
+        
+        # initialisation de la vue
+        self.draw(self.fenetre)
+        pg.display.update()
+
+        action = ACTIONS.ADDING_PLAYERS
+        while running:
+            
+            # intercept events
+            for event in pg.event.get():
+                # fermeture de la fenêtre
+                if event.type == pg.QUIT:
+                    pg.quit()
+                    sys.exit()
+                # pression sur la touche entrée pour valider le placement des joueurs
+                elif event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                    running = False
+                # clic de souris
+                elif event.type == pg.MOUSEBUTTONDOWN:
+                    mouse_held = True
+                    x, y = event.pos
+                    cell_x = x // self.map.taille_cellule
+                    cell_y = y // self.map.taille_cellule
+                    add(cell_x, cell_y, action)
+                    
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_w:
+                        action = ACTIONS.ADDING_WALLS
+                    elif event.key == pg.K_d:
+                        action = ACTIONS.ADDING_DOORS
+                    elif event.key == pg.K_c:
+                        action = ACTIONS.ADDING_PLAYERS
+                elif event.type == pg.MOUSEBUTTONUP:
+                    mouse_held = False
+                
+
+            # Set cell to alive when dragging
+            if mouse_held:
+                x, y = pg.mouse.get_pos()
+                cell_x = x // self.map.taille_cellule
+                cell_y = y // self.map.taille_cellule
+                add(cell_x, cell_y, action)
+
+            pg.display.update()
+
+
+    def apply_rules(self):
+        for player in self.map.players:
+            if not player.is_arrived:
+                player.apply_rules(eta=1)
+    
+    
+    def pass_epoch(self):
+        for cell in self.cells:
+            cell.pass_epoch()
+            
+    def draw(self,fenetre):
+        # draw map
+        self.map.draw(fenetre)
+        # draw players
+        for cell in self.cells:
+            cell.draw(fenetre)
+                
+            
+
+            
+            
+            
+        

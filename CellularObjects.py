@@ -111,7 +111,13 @@ class AutomateCellulaire:
         screen_info = pygame.display.Info()
         self.SCREEN_WIDTH, self.SCREEN_HEIGHT = screen_info.current_w, screen_info.current_h
         self.TAILLE_CELLULE = min(self.SCREEN_WIDTH // largeur, self.SCREEN_HEIGHT // hauteur)
-        self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE, largeur // 2, hauteur, [(largeur // 2, hauteur - 1), (largeur // 2 + 1, hauteur - 1), (largeur // 2 - 1, hauteur - 1)])
+        self.grille = Grille(
+            largeur, 
+            hauteur, 
+            self.TAILLE_CELLULE, 
+            largeur // 2, 
+            hauteur, 
+            [(largeur // 2, hauteur - 1), (largeur // 2 + 1, hauteur - 1), (largeur // 2 - 1, hauteur - 1)])
         self.state = "MENU"
         # Variables pour suivre l'état de la configuration
         self.is_adding_wall = False
