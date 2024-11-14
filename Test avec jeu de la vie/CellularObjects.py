@@ -62,6 +62,7 @@ class AutomateCellulaire:
         self.TAILLE_CELLULE = min(self.SCREEN_WIDTH // largeur, self.SCREEN_HEIGHT // hauteur)
         self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE)
         self.state = "MENU"
+        
     def afficher_menu(self, fenetre):
         # Define colors
         background_color = (255, 255, 255)
@@ -124,7 +125,7 @@ class AutomateCellulaire:
     def avancer(self):
         self.grille.appliquer_regles(self.TAILLE_CELLULE)
     
-    def jouer(self, nb_iter):
+    def jouer(self):
         fenetre = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         # Initialize Pygame screen and other setup code here
         clock = pygame.time.Clock()
@@ -177,46 +178,8 @@ class AutomateCellulaire:
                             self.state = "MENU"  # Go back to menu
 
             # Control frame rate
-                clock.tick(50)  # Adjust tick speed to avoid excessive refresh
+                clock.tick(5)  # Adjust tick speed to avoid excessive refresh
 
-    def setup_grille(self, fenetre):
-        running = True
-        mouse_held = False  # Track if the mouse button is held down
-
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                    self.state = "RUNNING"
-                    running = False
-               
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    mouse_held = True
-                    x, y = event.pos
-                    cell_x = x // self.TAILLE_CELLULE
-                    cell_y = y // self.TAILLE_CELLULE
-                    cell = self.grille.cellule(cell_x, cell_y)
-                    cell.etat = not cell.etat
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    mouse_held = False
-                
-                
-                    
-                
-
-            # Check if mouse is held down and moved to draw
-            if mouse_held:
-                x, y = pygame.mouse.get_pos()
-                cell_x = x // self.TAILLE_CELLULE
-                cell_y = y // self.TAILLE_CELLULE
-                cell = self.grille.cellule(cell_x, cell_y)
-                cell.etat = True  # Set cell to alive when dragging
-
-            # Redraw the grid
-            fenetre.fill((255, 255, 255))
-            self.grille.afficher(fenetre, self.TAILLE_CELLULE)
-            pygame.display.update()
+    
 
 
