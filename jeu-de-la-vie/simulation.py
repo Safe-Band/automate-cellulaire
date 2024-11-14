@@ -1,3 +1,15 @@
+""" Behavorial part for the crowd simulation
+
+This module contains the classes and functions that are used to simulate the crowd behavior.
+
+A simulation includes a map and a list of players that are on the map.
+Players have there own behavior rules and are meant to interact with each other.
+
+Creation date : 14 november 2024
+Last update : 14 november 2024  
+
+"""
+
 import pygame as pg
 import random
 import sys
