@@ -87,6 +87,7 @@ class AutomateCellulaire:
         self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE)
         self.state = "MENU"
         
+        
     def afficher_menu(self, fenetre):
         # Define colors
         background_color = (255, 255, 255)
