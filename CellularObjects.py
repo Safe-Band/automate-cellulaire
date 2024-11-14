@@ -12,24 +12,39 @@ except pygame.error as e:
     sys.exit()
 
 class Cellule:
-    def __init__(self, x, y, taille, etat=False):
+    def __init__(self, x, y, taille, nombre_classes,etat=False):
         self.x = x
         self.y = y
         self.etat = etat
+        self.classe = random.choice(range(nombre_classes))
         self.image = pygame.transform.scale(random.choice([image_tomate, image_tomate2]), (taille, taille))
-
+        
+        if self.classe == 1:
+            self.image.fill((0, 0, 255), special_flags=pygame.BLEND_MULT)  # Blue
+        elif self.classe == 2:
+            self.image.fill((255, 0, 0), special_flags=pygame.BLEND_MULT)  # Red
+        elif self.classe == 3:
+            self.image.fill((255, 255, 0), special_flags=pygame.BLEND_MULT)  # Yellow
+        elif self.classe == 4:
+            self.image.fill((255, 165, 0), special_flags=pygame.BLEND_MULT)  # Orange
 class Grille:
-    def __init__(self, largeur, hauteur, taille, x0, y0, porte, mur = None):
+    def __init__(self, largeur, hauteur, taille, x0, y0, porte = None, mur = None):
         self.largeur = largeur
         self.hauteur = hauteur
-        self.grille = [[Cellule(x, y, taille) for x in range(largeur)] for y in range(hauteur)]
-        self.distance = [[math.sqrt((x0 - x)**2 + (y0 - y)**2) for x in range(self.largeur)] for y in range(self.hauteur)]
-        self.porte = porte
+        self.grille = [[Cellule(x, y, taille, len(x0)) for x in range(largeur)] for y in range(hauteur)]
+        self.distance = [[[math.sqrt((x0[i] - x)**2 + (y0[i] - y)**2) for x in range(self.largeur)] for y in range(self.hauteur)] for i in range(len(x0))]
+        if porte:
+            self.porte = porte
+        else:
+            self.porte = []
+            for i in range(len(x0)):
+                self.porte.append([x0[i], y0[i]])
+
         if mur:
             self.mur = mur
         else:
             self.mur = [(x, 0) for x in range(largeur)] + [(x, hauteur - 1) for x in range(largeur)] + [(0, y) for y in range(hauteur)] + [(largeur - 1, y) for y in range(hauteur)]
-            self.mur = [pos for pos in self.mur if pos not in porte]
+            self.mur = [pos for pos in self.mur if pos not in self.porte]
         
 
     def cellule(self, x, y):
@@ -42,17 +57,29 @@ class Grille:
     def ajouter_porte(self, x, y):
         if (x, y) not in self.porte and (x, y) not in self.mur:
             self.porte.append((x, y))
-        
-    def appliquer_regles(self, eta):
-        # Obtenir une liste des cellules actives et la mélanger aléatoirement
-        active_cells = [cell for row in self.grille for cell in row if cell.etat]
-        random.shuffle(active_cells)
-        # Mettre à jour les états des cellules actives
-        for cell in active_cells:
-            if (cell.x, cell.y) in self.porte:
-                cell.etat = False
-            else:
-                # Positions voisines : haut, bas, gauche, droite, et la position actuelle
+    def deplacement(self, cell1, x, y):
+        if cell1.etat:
+            cell2 = self.cellule(x, y)
+            cell2.x = cell1.x
+            cell2.y = cell1.y
+            cell1.x = x
+            cell1.y = y
+            
+            
+    def appliquer_regles(self, eta = 0.1, Parallel= False, mu = 1):
+        if Parallel:
+
+            # Step 1: Initialize the conflict grid
+            conflict_grille = [[None for _ in range(self.largeur)] for _ in range(self.hauteur)]
+            active_cells = [cell for row in self.grille for cell in row if cell.etat]
+            random.shuffle(active_cells)
+
+            # Step 2: Populate conflict_grille with intended moves
+            for cell in active_cells:
+                if (cell.x, cell.y) in self.porte:
+                    cell.etat = False
+                    continue
+                # Define neighbor positions
                 voisin_positions = [
                     (cell.x, cell.y - 1),
                     (cell.x, cell.y + 1),
@@ -61,24 +88,74 @@ class Grille:
                     (cell.x, cell.y)
                 ]
 
-                # Conserver uniquement les positions valides
-                voisins_valides = [pos for pos in voisin_positions if 0 <= pos[0] < self.largeur and 0 <= pos[1] < self.hauteur and (not self.grille[pos[1]][pos[0]].etat or pos == (cell.x, cell.y)) and pos not in self.mur]
+                # Filter valid neighbors
+                voisins_valides = [
+                    pos for pos in voisin_positions
+                    if 0 <= pos[0] < self.largeur and 0 <= pos[1] < self.hauteur
+                    and (not self.grille[pos[1]][pos[0]].etat or pos == (cell.x, cell.y))
+                    and pos not in self.mur
+                ]
 
-                # Calcul des distances pour les positions valides
-                H = np.array([self.distance[pos[1]][pos[0]] for pos in voisins_valides])
-
-                # Calcul des poids avec une distribution de Boltzmann
+                # Calculate distances and probabilities
+                H = np.array([self.distance[cell.classe][pos[1]][pos[0]] for pos in voisins_valides])
                 W = np.exp(-eta * H)
-                W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
+                W /= W.sum()  # Normalize probabilities
 
-                # Choix de la position en fonction de la distribution de probabilités
+                # Choose a position based on the probability distribution
                 chosen_index = np.random.choice(len(W), p=W)
                 chosen_pos = voisins_valides[chosen_index]
 
-                # Activer la cellule choisie
-                if chosen_pos != (cell.x, cell.y):
-                    self.grille[chosen_pos[1]][chosen_pos[0]].etat = True
+                # Record intended move in conflict_grille
+                conflict_grille[chosen_pos[1]][chosen_pos[0]] = conflict_grille[chosen_pos[1]][chosen_pos[0]] or []
+                conflict_grille[chosen_pos[1]][chosen_pos[0]].append(cell)
+
+            # Step 3: Resolve conflicts in conflict_grille
+            for y in range(self.hauteur):
+                for x in range(self.largeur):
+                    if conflict_grille[y][x]:
+                        conflit = random.random() < mu
+                        if conflit or len(conflict_grille[y][x]) == 1:
+                            # Resolve conflict by choosing a random winner
+                            winner = random.choice(conflict_grille[y][x])
+                            # Update the winner's state
+                            self.deplacement(winner, x, y)
+                    
+            
+        else:
+            # Obtenir une liste des cellules actives et la mélanger aléatoirement
+            active_cells = [cell for row in self.grille for cell in row if cell.etat]
+            random.shuffle(active_cells)
+            # Mettre à jour les états des cellules actives
+            for cell in active_cells:
+                if (cell.x, cell.y) in self.porte:
                     cell.etat = False
+                else:
+                    # Positions voisines : haut, bas, gauche, droite, et la position actuelle
+                    voisin_positions = [
+                        (cell.x, cell.y - 1),
+                        (cell.x, cell.y + 1),
+                        (cell.x - 1, cell.y),
+                        (cell.x + 1, cell.y),
+                        (cell.x, cell.y)
+                    ]
+
+                    # Conserver uniquement les positions valides
+                    voisins_valides = [pos for pos in voisin_positions if 0 <= pos[0] < self.largeur and 0 <= pos[1] < self.hauteur and (not self.grille[pos[1]][pos[0]].etat or pos == (cell.x, cell.y)) and pos not in self.mur]
+
+                    # Calcul des distances pour les positions valides
+                    H = np.array([self.distance[cell.classe][pos[1]][pos[0]] for pos in voisins_valides])
+
+                    # Calcul des poids avec une distribution de Boltzmann
+                    W = np.exp(-eta * H)
+                    W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
+
+                    # Choix de la position en fonction de la distribution de probabilités
+                    chosen_index = np.random.choice(len(W), p=W)
+                    chosen_pos = voisins_valides[chosen_index]
+
+                    # Activer la cellule choisie
+                    if chosen_pos != (cell.x, cell.y):
+                        self.deplacement(cell, chosen_pos[0], chosen_pos[1])
 
     def afficher(self, fenetre, TAILLE_CELLULE, button_x, button_y, button_width, button_height):
         for cells in self.grille:
@@ -99,11 +176,6 @@ class Grille:
         for (px, py) in self.mur:
             pygame.draw.rect(fenetre, (0, 0, 0), (px * TAILLE_CELLULE, py * TAILLE_CELLULE, TAILLE_CELLULE, TAILLE_CELLULE))
         pygame.display.update()
-# Draw the door
-
-import pygame
-import sys
-import random
 
 class AutomateCellulaire:
     def __init__(self, largeur, hauteur):
@@ -111,7 +183,7 @@ class AutomateCellulaire:
         screen_info = pygame.display.Info()
         self.SCREEN_WIDTH, self.SCREEN_HEIGHT = screen_info.current_w, screen_info.current_h
         self.TAILLE_CELLULE = min(self.SCREEN_WIDTH // largeur, self.SCREEN_HEIGHT // hauteur)
-        self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE, largeur // 2, hauteur, [(largeur // 2, hauteur - 1), (largeur // 2 + 1, hauteur - 1), (largeur // 2 - 1, hauteur - 1)])
+        self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE, [largeur // 2, largeur - 2], [hauteur - 2, hauteur // 2])
         self.state = "MENU"
         # Variables pour suivre l'état de la configuration
         self.is_adding_wall = False
