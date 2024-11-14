@@ -86,6 +86,7 @@ class AutomateCellulaire:
         self.TAILLE_CELLULE = min(self.SCREEN_WIDTH // largeur, self.SCREEN_HEIGHT // hauteur)
         self.grille = Grille(largeur, hauteur, self.TAILLE_CELLULE)
         self.state = "MENU"
+        
     def afficher_menu(self, fenetre):
         # Define colors
         background_color = (255, 255, 255)
@@ -148,7 +149,7 @@ class AutomateCellulaire:
     def avancer(self):
         self.grille.appliquer_regles(self.TAILLE_CELLULE)
     
-    def jouer(self, nb_iter):
+    def jouer(self):
         fenetre = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
         # Initialize Pygame screen and other setup code here
         clock = pygame.time.Clock()
@@ -190,7 +191,7 @@ class AutomateCellulaire:
                             self.state = "MENU"  # Go back to menu
 
             # Control frame rate
-                clock.tick(50)  # Adjust tick speed to avoid excessive refresh
+                clock.tick(5)  # Adjust tick speed to avoid excessive refresh
 
     def setup_grille(self, fenetre):
         print("hello")
