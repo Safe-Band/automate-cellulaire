@@ -12,7 +12,6 @@ image_tomate = pygame.transform.scale(image_tomate, (50, 50))
 
 class Cellule:
     def __init__(self, x, y, taille, etat=False):
-    def __init__(self, x, y, taille, etat=False):
         self.x = x
         self.y = y
         self.etat = etat
@@ -21,7 +20,6 @@ class Cellule:
         self.image = pygame.transform.scale(random.choice([image_tomate, image_tomate2]), (taille, taille))
 
 class Grille:
-    def __init__(self, largeur, hauteur, taille):
     def __init__(self, largeur, hauteur, taille):
         self.largeur = largeur
         self.hauteur = hauteur
@@ -178,6 +176,7 @@ class AutomateCellulaire:
                 
                 button_width, button_height = 200, 50
                 button_x = self.SCREEN_WIDTH // 2 - button_width // 2
+                button_y = self.SCREEN_HEIGHT - button_height - 50
                 # Event handling
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -193,7 +192,6 @@ class AutomateCellulaire:
                 clock.tick(50)  # Adjust tick speed to avoid excessive refresh
 
     def setup_grille(self, fenetre):
-        print("hello")
         running = True
         mouse_held = False  # Track if the mouse button is held down
 
