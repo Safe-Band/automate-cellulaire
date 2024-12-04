@@ -32,6 +32,7 @@ class ACTIONS(Enum):
     CHANGE_ATTRACTOR2 = 7
     CHANGE_ATTRACTOR3 = 8
     CHANGE_ATTRACTOR4 = 9
+    DO_NOTHING = 10
     
 class TYPE_CELL(Enum):
         VIDE = 0
@@ -39,7 +40,11 @@ class TYPE_CELL(Enum):
         PORTE = 2
         OCCUPED = 3
         PRODUCTOR =4
-        ATTRACTOR = 5
+        ATTRACTOR1 = 5
+        ATTRACTOR2 = 6
+        ATTRACTOR3 = 7
+        ATTRACTOR4 = 8
+
         
         
 class Cell:
@@ -113,8 +118,17 @@ class Cell:
         self.grille.x0[nb_attract] = self.x
         self.grille.y0[nb_attract] = self.y
         self.grille.change_distance(self.grille.x0, self.grille.y0)
-        self.current_state = TYPE_CELL.ATTRACTOR
-        
+        match nb_attract:
+            case 0:
+                self.current_state = TYPE_CELL.ATTRACTOR1
+            case 1:
+                self.current_state = TYPE_CELL.ATTRACTOR2
+
+            case 2:
+                self.current_state = TYPE_CELL.ATTRACTOR3
+            case 3:
+                self.current_state = TYPE_CELL.ATTRACTOR4
+
     def is_occuped(self):
         return self.current_state == TYPE_CELL.OCCUPED
     
@@ -147,8 +161,26 @@ class Cell:
                 pg.draw.rect(fenetre, (165, 42, 42), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
             case TYPE_CELL.PRODUCTOR:
                 pg.draw.rect(fenetre, (0, 255, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
-            case TYPE_CELL.ATTRACTOR:
+            case TYPE_CELL.ATTRACTOR1:
                 pg.draw.rect(fenetre, (0, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                font = pg.font.Font(None, 36)
+                text = font.render('1', True, (0, 0, 0))
+                fenetre.blit(text, (self.x * self.taille + self.taille // 2 - text.get_width() // 2, self.y * self.taille + self.taille // 2 - text.get_height() // 2))
+            case TYPE_CELL.ATTRACTOR2:
+                pg.draw.rect(fenetre, (0, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                font = pg.font.Font(None, 36)
+                text = font.render('2', True, (0, 0, 0))
+                fenetre.blit(text, (self.x * self.taille + self.taille // 2 - text.get_width() // 2, self.y * self.taille + self.taille // 2 - text.get_height() // 2))
+            case TYPE_CELL.ATTRACTOR3:
+                pg.draw.rect(fenetre, (0, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                font = pg.font.Font(None, 36)
+                text = font.render('3', True, (0, 0, 0))
+                fenetre.blit(text, (self.x * self.taille + self.taille // 2 - text.get_width() // 2, self.y * self.taille + self.taille // 2 - text.get_height() // 2))
+            case TYPE_CELL.ATTRACTOR4:
+                pg.draw.rect(fenetre, (0, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+                font = pg.font.Font(None, 36)
+                text = font.render('4', True, (0, 0, 0))
+                fenetre.blit(text, (self.x * self.taille + self.taille // 2 - text.get_width() // 2, self.y * self.taille + self.taille // 2 - text.get_height() // 2))
     def highlight(self, fenetre: pg.Surface):
         pg.draw.rect(fenetre, (0, 100, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
                 
@@ -206,10 +238,22 @@ class Grille:
             if productor:
                 self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0)) if (i, j) != (0, 0)]
                 self.productor = [(p0 + i, p1 + j) for i in range(-1, 2) for j in range(-1, 2)]
-                self.attractor = [(x0[z], y0[z]) for z in range(len(x0))]
             else:
                 self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0)) if (i, j) != (0, 0)]
                 self.attractor = [(x0[z], y0[z]) for z in range(len(x0))]
+            for z in range(len(x0)):
+                match z:
+                    case 0:
+                        self.grille[y0[z]][x0[z]].current_state = TYPE_CELL.ATTRACTOR1
+                    case 1:
+                        self.grille[y0[z]][x0[z]].current_state = TYPE_CELL.ATTRACTOR2
+                    case 2:
+                        self.grille[y0[z]][x0[z]].current_state = TYPE_CELL.ATTRACTOR3
+                    case 3:
+                        self.grille[y0[z]][x0[z]].current_state = TYPE_CELL.ATTRACTOR4
+                    
+
+
         else:
             self.porte = porte
         if not mur:
@@ -227,8 +271,7 @@ class Grille:
             self.grille[y][x].current_state = TYPE_CELL.PORTE
         for (x, y) in self.productor:
             self.grille[y][x].current_state = TYPE_CELL.PRODUCTOR
-        for (x, y) in self.attractor:
-            self.grille[y][x].current_state = TYPE_CELL.ATTRACTOR
+    
 
 
     def cellule(self, x, y) -> Cell:
@@ -554,6 +597,8 @@ class Simulation:
         pg.display.update()
 
         action = ACTIONS.ADDING_PLAYERS
+        pg.key.set_repeat(20, 5)
+
         while running:
             
             # intercept events
@@ -563,46 +608,42 @@ class Simulation:
                     pg.quit()
                     sys.exit()
                 # pression sur la touche entrée pour valider le placement des joueurs
-                elif event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
-                    running = False
+                elif event.type == pg.KEYDOWN:
                 # clic de souris
-                elif event.type == pg.MOUSEBUTTONDOWN:
-                    mouse_held = True
-                    x, y = event.pos
+                
+                    
+                    def act(action, actions):
+                        if action == actions:
+                            action = ACTIONS.DO_NOTHING
+                        else:
+                            action = actions
+                        return action
+                    if event.key == pg.K_RETURN:
+                        running = False
+                    elif event.key == pg.K_w:
+                        action = act(action, ACTIONS.ADDING_WALLS)
+                    elif event.key == pg.K_d:
+                        action = act(action, ACTIONS.ADDING_DOORS)
+                    elif event.key == pg.K_p:
+                        action = act(action, ACTIONS.ADDING_PLAYERS)
+                    elif event.key == pg.K_r:
+                        action = act(action, ACTIONS.ADDING_PRODUCTORS)
+                    elif event.key == pg.K_e:
+                        action = act(action, ACTIONS.ADDING_EMPTY)
+                    elif event.key == pg.K_1:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR1)
+                    elif event.key == pg.K_2:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR2)
+                    elif event.key == pg.K_3:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR3)
+                    elif event.key == pg.K_4:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR4)
+                
+                
+                    x, y = pg.mouse.get_pos()
                     cell_x = x // self.map.taille_cellule
                     cell_y = y // self.map.taille_cellule
                     add(cell_x, cell_y, action)
-                    
-                elif event.type == pg.KEYDOWN:
-                    if event.key == pg.K_w:
-                        action = ACTIONS.ADDING_WALLS
-                    elif event.key == pg.K_d:
-                        action = ACTIONS.ADDING_DOORS
-                    elif event.key == pg.K_p:
-                        action = ACTIONS.ADDING_PLAYERS
-                    elif event.key == pg.K_r:
-                        action = ACTIONS.ADDING_PRODUCTORS
-                    elif event.key == pg.K_e:
-                        action = ACTIONS.ADDING_EMPTY
-                    elif event.key == pg.K_1:
-                        action = ACTIONS.CHANGE_ATTRACTOR1
-                    elif event.key == pg.K_2:
-                        action = ACTIONS.CHANGE_ATTRACTOR2
-                    elif event.key == pg.K_3:
-                        action = ACTIONS.CHANGE_ATTRACTOR3
-                    elif event.key == pg.K_4:
-                        action = ACTIONS.CHANGE_ATTRACTOR4
-
-                elif event.type == pg.MOUSEBUTTONUP:
-                    mouse_held = False
-                
-
-            # Set cell to alive when dragging
-            if mouse_held:
-                x, y = pg.mouse.get_pos()
-                cell_x = x // self.map.taille_cellule
-                cell_y = y // self.map.taille_cellule
-                add(cell_x, cell_y, action)
 
             pg.display.update()
 

@@ -384,12 +384,16 @@ class Game:
                     cell.change_attractor(2)
                 case ACTIONS.CHANGE_ATTRACTOR4:
                     cell.change_attractor(3)
+                case ACTIONS.DO_NOTHING:
+                    pass
             cell.draw(simulation.fenetre)
         
 
         running = True
         mouse_held = False
         action = ACTIONS.ADDING_PLAYERS
+
+        pg.key.set_repeat(20, 5)
         while running :
 
             for event in pg.event.get():
@@ -398,45 +402,44 @@ class Game:
                     pg.quit()
                     sys.exit()
                 # pression sur la touche entrée pour valider le placement des joueurs
-                elif event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
-                    running = False
+                
                 # clic de souris
-                elif event.type == pg.MOUSEBUTTONDOWN:
-                    mouse_held = True
-                    x, y = event.pos
+                
+
+                
+                elif event.type == pg.KEYDOWN:
+                    
+                    def act(action, actions):
+                        if action == actions:
+                            action = ACTIONS.DO_NOTHING
+                        else:
+                            action = actions
+                        return action
+                    if event.key == pg.K_RETURN:
+                        running = False
+                    elif event.key == pg.K_w:
+                        action = act(action, ACTIONS.ADDING_WALLS)
+                    elif event.key == pg.K_d:
+                        action = act(action, ACTIONS.ADDING_DOORS)
+                    elif event.key == pg.K_p:
+                        action = act(action, ACTIONS.ADDING_PLAYERS)
+                    elif event.key == pg.K_r:
+                        action = act(action, ACTIONS.ADDING_PRODUCTORS)
+                    elif event.key == pg.K_e:
+                        action = act(action, ACTIONS.ADDING_EMPTY)
+                    elif event.key == pg.K_1:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR1)
+                    elif event.key == pg.K_2:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR2)
+                    elif event.key == pg.K_3:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR3)
+                    elif event.key == pg.K_4:
+                        action = act(action, ACTIONS.CHANGE_ATTRACTOR4)
+                
+                    x, y = pg.mouse.get_pos()
                     cell_x = x // simulation.map.taille_cellule
                     cell_y = y // simulation.map.taille_cellule
                     add(cell_x, cell_y, action)
-                    
-                elif event.type == pg.KEYDOWN:
-                    if event.key == pg.K_w:
-                        action = ACTIONS.ADDING_WALLS
-                    elif event.key == pg.K_d:
-                        action = ACTIONS.ADDING_DOORS
-                    elif event.key == pg.K_p:
-                        action = ACTIONS.ADDING_PLAYERS
-                    elif event.key == pg.K_r:
-                        action = ACTIONS.ADDING_PRODUCTORS
-                    elif event.key == pg.K_e:
-                        action = ACTIONS.ADDING_EMPTY
-                    elif event.key == pg.K_1:
-                        action = ACTIONS.CHANGE_ATTRACTOR1
-                    elif event.key == pg.K_2:
-                        action = ACTIONS.CHANGE_ATTRACTOR2
-                    elif event.key == pg.K_3:
-                        action = ACTIONS.CHANGE_ATTRACTOR3
-                    elif event.key == pg.K_4:
-                        action = ACTIONS.CHANGE_ATTRACTOR4
-                elif event.type == pg.MOUSEBUTTONUP:
-                    mouse_held = False
-                
-
-            # Set cell to alive when dragging
-            if mouse_held:
-                x, y = pg.mouse.get_pos()
-                cell_x = x // simulation.map.taille_cellule
-                cell_y = y // simulation.map.taille_cellule
-                add(cell_x, cell_y, action)
 
             pg.display.update()
                 
