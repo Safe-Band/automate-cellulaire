@@ -15,7 +15,78 @@ import random
 from simulation import Simulation
 
 
+
+class TextInput:
+    def __init__(self, x, y, width, height, font, color, active_color, text=""):
+        self.rect = pg.Rect(x, y, width, height)
+        self.font = font
+        self.color = color
+        self.active_color = active_color
+        self.text = text
+        self.active = False
+        self.cursor_visible = True
+        self.cursor_timer = pg.time.get_ticks()
+        
+    def handle_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            # Toggle l'activation si on clique sur le champ
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False  # Désactive si on clique en dehors
+
+        if event.type == pg.KEYDOWN and self.active:  # Agit seulement si actif
+            if event.key == pg.K_BACKSPACE:
+                self.text = self.text[:-1]  # Supprime le dernier caractère
+            elif event.key == pg.K_RETURN:
+                self.active = False  # Désactive le champ sur Entrée (optionnel)
+            else:
+                self.text += event.unicode  # Ajoute le caractère saisi
+
+        return self.text
+    def draw(self, screen):
+        # Couleur dynamique selon l'état actif
+        color = self.active_color if self.active else self.color
+
+        # Dessiner le contour du champ
+        pg.draw.rect(screen, color, self.rect, 2)
+
+        # Effacer l'intérieur du champ (remplissage blanc sans toucher au contour)
+        inner_rect = self.rect.inflate(-4, -4)  # Réduire légèrement pour éviter d'écraser le contour
+        screen.fill((255, 255, 255), inner_rect)
+
+        # Rendu du texte aligné à droite
+        text_surface = self.font.render(self.text, True, color)
+        text_x = self.rect.x + self.rect.width - text_surface.get_width() - 5
+        screen.blit(text_surface, (text_x, self.rect.y + 5))
+
+        # Affichage du curseur uniquement si actif
+        if self.active:
+            if self.cursor_visible:
+                cursor_x = text_x + text_surface.get_width()
+                cursor_y = self.rect.y + 5
+                pg.draw.line(screen, color, (cursor_x, cursor_y), (cursor_x, cursor_y + self.rect.height - 10))
+
+            # Gestion du clignotement du curseur
+            if pg.time.get_ticks() - self.cursor_timer > 500:
+                self.cursor_visible = not self.cursor_visible
+                self.cursor_timer = pg.time.get_ticks()
+
 class Button:
+    """
+    Class that represents a button in the game.
+    attributes:
+    - x : int : x position of the button
+    - y : int : y position of the button
+    - width : int : width of the button
+    - height : int : height of the button
+    - text : str : text displayed on the button
+    - color : tuple : color of the button
+    - hover_color : tuple : color of the button when hovered
+    - rect : pg.Rect : rectangle object representing the button
+    methods:
+    - draw : draw the button on the screen
+    """
     
     def __init__(self, x, y, width, height, text, color, hover_color):
         self.x = x
@@ -26,6 +97,7 @@ class Button:
         self.color = color
         self.hover_color = hover_color
         self.rect = pg.Rect(x, y, width, height)
+        self.param = {}
         
     def draw(self, fenetre : pg.Surface):
         mouse_x, mouse_y = pg.mouse.get_pos()
@@ -40,6 +112,27 @@ class Button:
 
         
 class Game:
+
+    """
+    Class that manages the game loop and the display of the game.
+    It uses the simulation.py file that contain more of the behaviorial code for the simulation
+    to run the simulation and display it on the screen.
+    attributes:
+    - state : str : current state of the game (MENU or Random or Choose)
+    - menu_choices : list : list of choices for the menu screen
+    - SCREEN_HEIGHT : int : height of the screen
+    - SCREEN_WIDTH : int : width of the screen
+    - clock : pg.time.Clock : clock object to manage the game speed
+    - eta : float : parameter for the parallel version of the simulation
+    - parallel : bool : True if the parallel version of the simulation is used
+    - colors : dict : dictionnary of colors used in the game
+    methods:
+    - update_screen_infos : update SCREEN_WIDTH and SCREEN_HEIGHT
+    - handle_events : handle events for the menu screen
+    - menu : display the menu screen and handle events
+    - run_simulation : run the simulation with the chosen mode
+    - jouer : main function that manages the passage between the menu and the simulation
+    """
     
     def __init__(self):
         pg.init()
@@ -48,6 +141,17 @@ class Game:
         self.SCREEN_HEIGHT = 0 
         self.SCREEN_WIDTH = 0
         self.clock = pg.time.Clock()
+        self.param = {'colonnes': 60, 
+                      'lignes': 30,
+                      'eta': 10,
+                      'Parallel': 1,
+                      'mu': 0.5,
+                      'nu': 0.5,
+                      'grad_coeff': 0.3,
+                      'proba_player': 0.2,
+                      'proba_wall': 0.05,
+                      }
+                      
         
         self.colors = {
             "background": (255, 255, 255),
@@ -66,7 +170,7 @@ class Game:
         self.SCREEN_HEIGHT = screen_infos.current_h
     
     
-    def handle_events(self, buttons):
+    def handle_events(self, buttons, inputs, label):
         """Handle events for the menu screen with two functionnalities:
         - Quit the game if the user closes the window
         - return text of the button clicked if a button is clicked
@@ -80,6 +184,12 @@ class Game:
                 for button in buttons:
                     if button.rect.collidepoint(event.pos):
                         return button.text
+            if inputs:
+                for name, input_field in inputs.items():
+                        value = input_field.handle_event(event)
+                        if value:
+                            self.param[name] = value
+
         return None
         
         
@@ -88,8 +198,9 @@ class Game:
         with button choices given in self.menu_choices"""
         self.update_screen_infos()
 
-        # Set font
+        # Font and input fields
         title_font = pg.font.Font(None, 74)
+        input_font = pg.font.Font(None, 36)
 
         # Render title
         title_text = title_font.render("Automate Cellulaire", True, self.colors["text"])
@@ -98,6 +209,47 @@ class Game:
         fenetre.fill(self.colors["background"])
         fenetre.blit(title_text, ( self.SCREEN_WIDTH // 2 - title_text.get_width() // 2, 100))
 
+
+        # Text input fields
+        inputs = {
+            "colonnes": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=500, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['colonnes'])
+            ),
+            "lignes": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=550, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['lignes'])
+            ),
+            "eta": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=600, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['eta'])
+            ),
+            "Parallel": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=650, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['Parallel'])
+            ),
+            "mu": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=700, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['nu'])
+            ),
+            "nu": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=750, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['nu'])
+            ),
+            "grad_coeff": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 100, y=800, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['grad_coeff'])
+            ),
+            "proba_player": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 250, y=800, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['proba_player'])
+            ),
+            "proba_wall": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 250, y=750, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['proba_wall'])
+            ),
+
+    }
         # Button dimensions and positions
         button_width, button_height = 200, 60
         buttons = {}
@@ -111,6 +263,8 @@ class Game:
                 color = self.colors["button"],
                 hover_color = self.colors["hover"]
                 )
+        
+
 
         # Draw the buttons and handle events
         while self.state == "MENU":
@@ -122,12 +276,22 @@ class Game:
                 button.draw(fenetre)
             
             # Gestion des événements
-            action = self.handle_events(buttons.values())
+            action = self.handle_events(buttons.values(), inputs, "Menu")
+        
+
             if action:
                 self.state = action
                 break
 
-            self.clock.tick(200)  # Adjust tick speed to avoid excessive refresh
+            for label, input_field in inputs.items():
+                input_text = input_font.render(label, True, self.colors["text"])
+                fenetre.blit(input_text, (input_field.rect.x - 110, input_field.rect.y + 5))
+                input_field.draw(fenetre)
+
+            
+
+
+            self.clock.tick(150)  # Adjust tick speed to avoid excessive refresh
             pg.display.update()
     
     
@@ -158,7 +322,7 @@ class Game:
         back_to_menu_button.draw(fenetre)
     
         # Initialize simulation
-        simulation = Simulation(fenetre)
+        simulation = Simulation(fenetre, int(self.param['colonnes']), int(self.param['lignes']), float(self.param['proba_wall']) , float(self.param['proba_player']))
         
         if self.state == "Random":
             simulation.random_setup()
@@ -168,11 +332,14 @@ class Game:
         simulation.draw(fenetre)
         pg.display.update()
         
+        simulation.map.gradient_obstacle( float(self.param['grad_coeff']) , 2 )
         
         running = True
         while running :
-            
-            simulation.apply_rules()
+            if not self.param['Parallel'] == "1":
+                simulation.apply_rules(float(self.param['eta']), float(self.param['nu']) )
+            else:
+                simulation.apply_rules_parallel( float(self.param['eta']), float(self.param['mu']),float(self.param['nu']) )
             
             # simulation.pass_epoch()
             
@@ -180,7 +347,7 @@ class Game:
             back_to_menu_button.draw(fenetre)
             
             # Event handling
-            if self.handle_events([back_to_menu_button]) == "Back to Menu":
+            if self.handle_events([back_to_menu_button], None, None) == "Back to Menu":
                 running = False
                 self.state = "MENU"
                 break
@@ -214,5 +381,6 @@ class Game:
                     
 
 if __name__ == "__main__":
+    print("Running the game")
     game = Game()
     game.jouer()
