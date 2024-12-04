@@ -26,12 +26,15 @@ class ACTIONS(Enum):
     ADDING_PLAYERS = 1
     ADDING_WALLS = 2
     ADDING_DOORS = 3
+    ADDING_PRODUCTORS = 4
+    ADDING_EMPTY = 5
     
 class TYPE_CELL(Enum):
         VIDE = 0
         MUR = 1
         PORTE = 2
         OCCUPED = 3
+        PRODUCTOR =4
         
 class Cell:
     """
@@ -59,7 +62,7 @@ class Cell:
     - pass_epoch : pass an epoch
     """
     
-    def __init__(self, x, y, taille, grille, is_alive=TYPE_CELL.VIDE):
+    def __init__(self, x, y, taille, grille):
         self.x = x
         self.y = y
         self.taille = taille
@@ -91,6 +94,11 @@ class Cell:
         if self.current_state == TYPE_CELL.OCCUPED:
             self.empty()
         self.current_state = TYPE_CELL.PORTE
+    
+    def set_productor(self):
+        if self.current_state == TYPE_CELL.OCCUPED:
+            self.empty()
+        self.current_state = TYPE_CELL.PRODUCTOR
         
     def is_occuped(self):
         return self.current_state == TYPE_CELL.OCCUPED
@@ -103,6 +111,9 @@ class Cell:
     
     def is_door(self):
         return self.current_state == TYPE_CELL.PORTE
+
+    def is_productor(self):
+        return self.current_state == TYPE_CELL.PRODUCTOR
         
     def draw(self, fenetre: pg.Surface):
         match self.current_state:
@@ -118,7 +129,8 @@ class Cell:
                 pg.draw.rect(fenetre, (0, 0, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
             case TYPE_CELL.PORTE:
                 pg.draw.rect(fenetre, (165, 42, 42), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
-    
+            case TYPE_CELL.PRODUCTOR:
+                pg.draw.rect(fenetre, (0, 255, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
     def highlight(self, fenetre: pg.Surface):
         pg.draw.rect(fenetre, (0, 100, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
                 
@@ -153,7 +165,7 @@ class Grille:
     - draw : draw the grid on the screen
     """
     
-    def __init__(self,x0, y0 ,fenetre, porte = None, mur=None, nb_colonnes = 30, nb_lignes = 60):
+    def __init__(self, x0, y0,fenetre, porte = None, mur=None, nb_colonnes = 30, nb_lignes = 60, classes = [0], productor = True,  p0 = None, p1 = None, exit = True, change_place = 0):
         
         screen_info = pg.display.Info()
         self.SCREEN_WIDTH = screen_info.current_w
@@ -164,13 +176,20 @@ class Grille:
         self.nb_lignes = nb_lignes
         self.grad_matrix = None
         self.x0 = x0
+        self.exit = exit
         self.y0 = y0
         self.taille_cellule = min(self.SCREEN_WIDTH // nb_colonnes, self.SCREEN_HEIGHT // nb_lignes)
-        
+        self.change_place = change_place
         self.grille = [[Cell(x, y, self.taille_cellule,self) for x in range(nb_colonnes)] for y in range(nb_lignes)]
         self.players = []
+        self.productor = []
         if not porte:
-            self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0))]
+            if productor:
+                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0))]
+                self.productor = [(p0 + i, p1 + j) for i in range(-1, 2) for j in range(-1, 2)]
+            else:
+                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0))]
+
         else:
             self.porte = porte
         if not mur:
@@ -180,10 +199,15 @@ class Grille:
             + [(nb_colonnes - 1, y) for y in range(nb_lignes)]
         else:
             self.mur = mur
+
+
         for (x, y) in self.mur:
             self.grille[y][x].current_state = TYPE_CELL.MUR
         for (x, y) in self.porte:
             self.grille[y][x].current_state = TYPE_CELL.PORTE
+        for (x, y) in self.productor:
+            self.grille[y][x].current_state = TYPE_CELL.PRODUCTOR
+
 
     def cellule(self, x, y) -> Cell:
         return self.grille[y][x]
@@ -225,6 +249,8 @@ class Grille:
             cell.empty()
         self.porte.append((x, y))
         cell.set_door()
+    
+    
         
     def add_player(self, x, y):
         cell = self.cellule(x, y)
@@ -233,6 +259,14 @@ class Grille:
             player = Player(cell)
             cell.player = player
             self.players.append(player)
+        if cell.current_state == TYPE_CELL.PRODUCTOR:
+
+            player = Player(cell)
+            cell.player = player
+            self.players.append(player)
+
+    
+    
     
     def get_cellules(self):
         return [cell for cells in self.grille for cell in cells]
@@ -280,15 +314,17 @@ class Player:
         self.last_encoutered = []
         self.grille: Grille = cell.grille
         self.image = pg.transform.scale(random.choice([image_tomate, image_tomate2]), (self.current_cell.taille, self.current_cell.taille))
-        self.classe = random.choice(range(len(self.grille.x0)))
+        self.classe = random.choice( range(len(self.grille.x0)))
         self.is_arrived = False
+        self.wanna_go = None
+
         match self.classe:
             case 1:
                 self.image.fill((0, 0, 180), special_flags=pg.BLEND_MULT)
             case 2:
-                self.image.fill((0, 180, 0), special_flags=pg.BLEND_MULT)
+                self.image.fill((0, 250, 0), special_flags=pg.BLEND_MULT)
             case 3:
-                self.image.fill((180, 180, 0), special_flags=pg.BLEND_MULT)
+                self.image.fill((0, 255, 255), special_flags=pg.BLEND_MULT)
         
         self.current_cell.player = self
         
@@ -300,6 +336,12 @@ class Player:
         cell.current_state = TYPE_CELL.OCCUPED
         self.inertie = 0
     
+    def exchange(self, cell: Cell):
+        temp_player = cell.player
+        cell.player = self
+        self.current_cell.player = temp_player
+        temp_player.current_cell = self.current_cell
+        self.current_cell = cell
         
 
 
@@ -307,7 +349,7 @@ class Player:
             list_i = []
             for j, voisin in enumerate(voisins_valides):
                 if len(self.last_encoutered) != 0:
-                    for k in range(1, min(10, len(self.last_encoutered))):
+                    for k in range(1, min(50, len(self.last_encoutered))):
                         if voisin.x == self.last_encoutered[-k][0] and voisin.y == self.last_encoutered[-k][1]:
                             list_i.append(j)
             if self.grille.grad_matrix is not None:
@@ -322,6 +364,20 @@ class Player:
                     H[i] += 3 - inertia
             H[-1] += inertia
             return H
+
+    def choose_index(self, voisins_valides, eta, nu):
+            H = np.array([ voisin.distance[self.classe] for voisin in voisins_valides ])
+            
+            H = self.inertia_and_grad(H, nu, voisins_valides)
+
+            W = np.exp((-eta * H) / (self.grille.nb_colonnes + self.grille.nb_lignes)**0.2 )
+
+            W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
+
+            # Choix de la position en fonction de la distribution de probabilités
+            chosen_index = np.random.choice(len(W), p=W)
+            chosen_cell = voisins_valides[chosen_index]
+            return chosen_cell
     
     def apply_rules(self, eta, nu):
         # Obtenir une liste des cellules actives et la mélanger aléatoirement
@@ -339,17 +395,8 @@ class Player:
         # pg.display.update()
         voisins_valides += [self.current_cell]
 
-        # Calcul des distances pour les positions valides
-        H = np.array([ voisin.distance[self.classe] for voisin in voisins_valides])
-        H = self.inertia_and_grad(H, nu, voisins_valides)
-        # Calcul des poids avec une distribution de Boltzmann
-        W = np.exp(-eta * H)
-        W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
 
-        # Choix de la position en fonction de la distribution de probabilités
-        chosen_index = np.random.choice(len(W), p=W)
-        chosen_cell = voisins_valides[chosen_index]
-
+        chosen_cell = self.choose_index(voisins_valides, eta, nu)
         # Activer la cellule choisie
         if chosen_cell == self.current_cell:
             pass
@@ -357,40 +404,38 @@ class Player:
             self.is_arrived = True
             self.current_cell.empty()
             self.current_cell = None
-        elif chosen_cell.current_state == TYPE_CELL.VIDE:
+        elif chosen_cell.current_state == TYPE_CELL.VIDE or chosen_cell.current_state == TYPE_CELL.PRODUCTOR:
             self.move(chosen_cell)
 #Pour faire le parallèle, créer la matrice de conflit puis la gérer dans la boucle de grille/simu à voir
     def apply_rules_parallel(self, eta, matrice_conflit, nu):
         voisins = self.grille.recuperer_voisins(self.current_cell.x, self.current_cell.y)
-        voisins_valides = [voisin for voisin in voisins if voisin.is_empty() or voisin.is_door()]
+        voisins_valides = [voisin for voisin in voisins if voisin.is_empty() or voisin.is_door() or (voisin.is_occuped() and self.grille.change_place != 0)]
         voisins_valides.append(self.current_cell)
-            
-        H = np.array([ voisin.distance[self.classe] for voisin in voisins_valides ])
         
-        H = self.inertia_and_grad(H, nu, voisins_valides)
-
-
-        W = np.exp(-eta * H)
-
-        W /= W.sum()  # Normalisation pour avoir une somme de probabilités de 1
-
-        # Choix de la position en fonction de la distribution de probabilités
-        chosen_index = np.random.choice(len(W), p=W)
-        chosen_cell = voisins_valides[chosen_index]
+        chosen_cell = self.choose_index(voisins_valides, eta, nu)
 
         # Activer la cellule choisie
+        
+        while chosen_cell.current_state == TYPE_CELL.OCCUPED and not chosen_cell == self.current_cell:
+            self.wanna_go = chosen_cell
+            if chosen_cell.player.wanna_go == self.current_cell and random.random() < self.grille.change_place:
+                self.exchange(chosen_cell)
+            else:
+                voisins_valides.remove(chosen_cell)
+                chosen_cell = self.choose_index(voisins_valides, eta, nu)
         if chosen_cell == self.current_cell:
             self.inertie += 1
             pass
-        elif chosen_cell.current_state == TYPE_CELL.PORTE:
+        elif chosen_cell.current_state == TYPE_CELL.PORTE and self.grille.exit:
             self.is_arrived = True
             self.current_cell.empty()
             self.current_cell = None
-        elif chosen_cell.current_state == TYPE_CELL.VIDE:
+
+        elif chosen_cell.current_state == TYPE_CELL.VIDE or chosen_cell.current_state == TYPE_CELL.PRODUCTOR:
             matrice_conflit[chosen_cell.x][chosen_cell.y].append(self)
             self.inertie = 0         
 
-class Simulation():
+class Simulation:
     """
     class that represents the simulation
 
@@ -412,26 +457,33 @@ class Simulation():
     - draw : draw the simulation on the screen
     """
         
-    def __init__(self, fenetre: pg.Surface = None, nb_colonnes = 30, nb_lignes = 60, proba_wall = 0.05, proba_player = 0.3):
+    def __init__(self, fenetre: pg.Surface = None, nb_colonnes = 30, nb_lignes = 60, proba_wall = 0.05, proba_player = 0.3, classes = 1, Productor = True, coeff_prod = 0.05, exit = False, change_place = 0):
         self.fenetre = fenetre
         screen_info = pg.display.Info()
         self.SCREEN_WIDTH = screen_info.current_w
         self.SCREEN_HEIGHT =  screen_info.current_h
         self.proba_wall = proba_wall
         self.proba_player = proba_player
+        self.classes = range(classes)
+        self.coeff_prod = coeff_prod        
         
-        
-        porte = [(nb_colonnes // 2, nb_lignes - 1), (nb_colonnes // 2 + 1, nb_lignes - 1), (nb_colonnes // 2 - 1, nb_lignes - 1)]
         self.map = Grille(
             nb_colonnes=nb_colonnes, 
             nb_lignes=nb_lignes,
-            x0=[nb_colonnes // 2, nb_colonnes - 2],
-            y0=[nb_lignes - 2, nb_lignes//2],
+            x0=[nb_colonnes // 2, nb_colonnes - 2, 2, nb_colonnes // 2][:classes - int(Productor)],
+            y0=[nb_lignes - 2, nb_lignes//2 , nb_lignes//2, 1][:classes - int(Productor)],
             #porte=porte,
-            fenetre=fenetre
+            fenetre=fenetre,
+            classes = self.classes,
+            productor = Productor,
+            p0=[nb_colonnes // 2, nb_colonnes - 2, 2, nb_colonnes // 2][classes - 1],
+            p1=[nb_lignes - 2, nb_lignes//2 , nb_lignes//2, 1][classes - 1],
+            exit = exit,
+            change_place = change_place
             )
         self.cells = self.map.get_cellules()
-        
+    
+
     def random_setup(self):
         for cell in self.cells:
             if random.random() < self.proba_player:
@@ -454,6 +506,10 @@ class Simulation():
                     self.map.ajouter_porte(x, y)
                 case ACTIONS.ADDING_PLAYERS:
                     self.map.add_player(x, y)
+                case ACTIONS.ADDING_PRODUCTORS:
+                    self.map.add_productor(x, y)
+                case ACTIONS.ADDING_EMPTY:
+                    cell.empty()
             cell.draw(self.fenetre)
                 
         
@@ -486,8 +542,13 @@ class Simulation():
                         action = ACTIONS.ADDING_WALLS
                     elif event.key == pg.K_d:
                         action = ACTIONS.ADDING_DOORS
-                    elif event.key == pg.K_c:
+                    elif event.key == pg.K_p:
                         action = ACTIONS.ADDING_PLAYERS
+                    elif event.key == pg.K_r:
+                        action = ACTIONS.ADDING_PRODUCTORS
+                    elif event.key == pg.K_e:
+                        action = ACTIONS.ADDING_EMPTY
+
                 elif event.type == pg.MOUSEBUTTONUP:
                     mouse_held = False
                 
@@ -506,12 +567,19 @@ class Simulation():
         for player in self.map.players:
             if not player.is_arrived:
                 player.apply_rules(eta=eta, nu = nu)
+            else:
+                del player
+        for produc in self.map.productor:
+            if random.random() < self.coeff_prod:
+                self.map.add_player(produc[0], produc[1])
+
     
     def apply_rules_parallel(self, eta, mu, nu):
         matrice_conflit = [[[] for _ in range(self.map.nb_lignes)] for _ in range(self.map.nb_colonnes)]
         for player in self.map.players:
             if not player.is_arrived:
                 player.apply_rules_parallel(eta=eta, matrice_conflit = matrice_conflit, nu = nu)
+        
         for x in range(self.map.nb_colonnes):
             for y in range(self.map.nb_lignes):
                 if len(matrice_conflit[x][y]) > 1 and random.random() < mu:
@@ -519,6 +587,9 @@ class Simulation():
                     matrice_conflit[x][y][0].move(self.map.cellule(x, y))
                 elif len(matrice_conflit[x][y]) == 1:
                     matrice_conflit[x][y][0].move(self.map.cellule(x, y))
+        for produc in self.map.productor:
+            if random.random() < self.coeff_prod:
+                self.map.add_player(produc[0], produc[1])
 
 
     def pass_epoch(self):

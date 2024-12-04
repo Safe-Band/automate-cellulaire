@@ -12,7 +12,7 @@ Last update : 14 november 2024
 import pygame as pg
 import sys
 import random
-from simulation import Simulation
+from simulation import Simulation, ACTIONS
 
 
 
@@ -44,6 +44,7 @@ class TextInput:
                 self.text += event.unicode  # Ajoute le caractère saisi
 
         return self.text
+    
     def draw(self, screen):
         # Couleur dynamique selon l'état actif
         color = self.active_color if self.active else self.color
@@ -57,7 +58,7 @@ class TextInput:
 
         # Rendu du texte aligné à droite
         text_surface = self.font.render(self.text, True, color)
-        text_x = self.rect.x + self.rect.width - text_surface.get_width() - 5
+        text_x = self.rect.x + self.rect.width - text_surface.get_width() - 5 # Déplacer vers la droite
         screen.blit(text_surface, (text_x, self.rect.y + 5))
 
         # Affichage du curseur uniquement si actif
@@ -97,7 +98,7 @@ class Button:
         self.color = color
         self.hover_color = hover_color
         self.rect = pg.Rect(x, y, width, height)
-        self.param = {}
+
         
     def draw(self, fenetre : pg.Surface):
         mouse_x, mouse_y = pg.mouse.get_pos()
@@ -150,6 +151,11 @@ class Game:
                       'grad_coeff': 0.3,
                       'proba_player': 0.2,
                       'proba_wall': 0.05,
+                      'classes': 1,
+                      'Productor': 0,
+                      'coeff_prod': 0.05,
+                      'exit': 1,
+                      'change_place': 0
                       }
                       
         
@@ -241,13 +247,34 @@ class Game:
                 font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['grad_coeff'])
             ),
             "proba_player": TextInput(
-                x=self.SCREEN_WIDTH // 2 + 250, y=800, width=200, height=40,
+                x=self.SCREEN_WIDTH // 2 + 300, y=800, width=200, height=40,
                 font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['proba_player'])
             ),
             "proba_wall": TextInput(
-                x=self.SCREEN_WIDTH // 2 + 250, y=750, width=200, height=40,
+                x=self.SCREEN_WIDTH // 2 + 300, y=750, width=200, height=40,
                 font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['proba_wall'])
             ),
+            "classes": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 300, y=700, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['classes'])
+            ),
+            "Productor": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 300, y=650, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['Productor'])
+            ),
+            "coeff_prod": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 300, y=600, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['coeff_prod'])
+            ),
+            "exit": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 300, y=550, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['exit'])
+            ),
+            "change_place": TextInput(
+                x=self.SCREEN_WIDTH // 2 + 300, y=500, width=200, height=40,
+                font=input_font, color=self.colors["text"], active_color=self.colors["hover"], text = str(self.param['change_place'])
+            )
+
 
     }
         # Button dimensions and positions
@@ -285,13 +312,13 @@ class Game:
 
             for label, input_field in inputs.items():
                 input_text = input_font.render(label, True, self.colors["text"])
-                fenetre.blit(input_text, (input_field.rect.x - 110, input_field.rect.y + 5))
+                fenetre.blit(input_text, (input_field.rect.x - 150, input_field.rect.y + 5))
                 input_field.draw(fenetre)
 
             
 
 
-            self.clock.tick(150)  # Adjust tick speed to avoid excessive refresh
+            self.clock.tick(500)  # Adjust tick speed to avoid excessive refresh
             pg.display.update()
     
     
@@ -322,7 +349,7 @@ class Game:
         back_to_menu_button.draw(fenetre)
     
         # Initialize simulation
-        simulation = Simulation(fenetre, int(self.param['colonnes']), int(self.param['lignes']), float(self.param['proba_wall']) , float(self.param['proba_player']))
+        simulation = Simulation(fenetre, int(self.param['colonnes']), int(self.param['lignes']), float(self.param['proba_wall']) , float(self.param['proba_player']), int(self.param['classes']), bool(int(self.param['Productor'])), float(self.param['coeff_prod'] ), bool(int(self.param['exit'])), float(self.param['change_place']))
         
         if self.state == "Random":
             simulation.random_setup()
@@ -334,8 +361,74 @@ class Game:
         
         simulation.map.gradient_obstacle( float(self.param['grad_coeff']) , 2 )
         
+        def add(x,y,action):
+            if x >= simulation.map.nb_colonnes or y >= simulation.map.nb_lignes:
+                return
+            cell = simulation.map.cellule(x, y)
+            match action:
+                case ACTIONS.ADDING_WALLS:
+                    simulation.map.ajouter_mur(x, y)
+                case ACTIONS.ADDING_DOORS:
+                    simulation.map.ajouter_porte(x, y)
+                case ACTIONS.ADDING_PLAYERS:
+                    simulation.map.add_player(x, y)
+                case ACTIONS.ADDING_PRODUCTORS:
+                    simulation.map.add_productor(x, y)
+                case ACTIONS.ADDING_EMPTY:
+                    cell.empty()
+            cell.draw(simulation.fenetre)
+        
+
         running = True
+        mouse_held = False
+        action = ACTIONS.ADDING_PLAYERS
         while running :
+
+            for event in pg.event.get():
+                # fermeture de la fenêtre
+                if event.type == pg.QUIT:
+                    pg.quit()
+                    sys.exit()
+                # pression sur la touche entrée pour valider le placement des joueurs
+                elif event.type == pg.KEYDOWN and event.key == pg.K_RETURN:
+                    running = False
+                # clic de souris
+                elif event.type == pg.MOUSEBUTTONDOWN:
+                    mouse_held = True
+                    x, y = event.pos
+                    cell_x = x // simulation.map.taille_cellule
+                    cell_y = y // simulation.map.taille_cellule
+                    add(cell_x, cell_y, action)
+                    
+                elif event.type == pg.KEYDOWN:
+                    if event.key == pg.K_w:
+                        action = ACTIONS.ADDING_WALLS
+                    elif event.key == pg.K_d:
+                        action = ACTIONS.ADDING_DOORS
+                    elif event.key == pg.K_p:
+                        action = ACTIONS.ADDING_PLAYERS
+                    elif event.key == pg.K_r:
+                        action = ACTIONS.ADDING_PRODUCTORS
+                    elif event.key == pg.K_e:
+                        action = ACTIONS.ADDING_EMPTY
+                elif event.type == pg.MOUSEBUTTONUP:
+                    mouse_held = False
+                
+
+            # Set cell to alive when dragging
+            if mouse_held:
+                x, y = pg.mouse.get_pos()
+                cell_x = x // simulation.map.taille_cellule
+                cell_y = y // simulation.map.taille_cellule
+                add(cell_x, cell_y, action)
+
+            pg.display.update()
+                
+
+            
+            
+
+
             if not self.param['Parallel'] == "1":
                 simulation.apply_rules(float(self.param['eta']), float(self.param['nu']) )
             else:
