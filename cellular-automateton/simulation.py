@@ -28,6 +28,10 @@ class ACTIONS(Enum):
     ADDING_DOORS = 3
     ADDING_PRODUCTORS = 4
     ADDING_EMPTY = 5
+    CHANGE_ATTRACTOR1 = 6
+    CHANGE_ATTRACTOR2 = 7
+    CHANGE_ATTRACTOR3 = 8
+    CHANGE_ATTRACTOR4 = 9
     
 class TYPE_CELL(Enum):
         VIDE = 0
@@ -35,6 +39,8 @@ class TYPE_CELL(Enum):
         PORTE = 2
         OCCUPED = 3
         PRODUCTOR =4
+        ATTRACTOR = 5
+        
         
 class Cell:
     """
@@ -99,6 +105,15 @@ class Cell:
         if self.current_state == TYPE_CELL.OCCUPED:
             self.empty()
         self.current_state = TYPE_CELL.PRODUCTOR
+    
+    def change_attractor(self, nb_attract):
+        if self.current_state == TYPE_CELL.OCCUPED:
+            self.empty()
+        self.grille.cellule(self.grille.x0[nb_attract], self.grille.y0[nb_attract]).empty()
+        self.grille.x0[nb_attract] = self.x
+        self.grille.y0[nb_attract] = self.y
+        self.grille.change_distance(self.grille.x0, self.grille.y0)
+        self.current_state = TYPE_CELL.ATTRACTOR
         
     def is_occuped(self):
         return self.current_state == TYPE_CELL.OCCUPED
@@ -114,6 +129,7 @@ class Cell:
 
     def is_productor(self):
         return self.current_state == TYPE_CELL.PRODUCTOR
+
         
     def draw(self, fenetre: pg.Surface):
         match self.current_state:
@@ -131,6 +147,8 @@ class Cell:
                 pg.draw.rect(fenetre, (165, 42, 42), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
             case TYPE_CELL.PRODUCTOR:
                 pg.draw.rect(fenetre, (0, 255, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
+            case TYPE_CELL.ATTRACTOR:
+                pg.draw.rect(fenetre, (0, 255, 255), (self.x * self.taille, self.y * self.taille, self.taille, self.taille))
     def highlight(self, fenetre: pg.Surface):
         pg.draw.rect(fenetre, (0, 100, 0), (self.x * self.taille, self.y * self.taille, self.taille, self.taille), 1)
                 
@@ -183,13 +201,15 @@ class Grille:
         self.grille = [[Cell(x, y, self.taille_cellule,self) for x in range(nb_colonnes)] for y in range(nb_lignes)]
         self.players = []
         self.productor = []
+        self.attractor = []
         if not porte:
             if productor:
-                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0))]
+                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0)) if (i, j) != (0, 0)]
                 self.productor = [(p0 + i, p1 + j) for i in range(-1, 2) for j in range(-1, 2)]
+                self.attractor = [(x0[z], y0[z]) for z in range(len(x0))]
             else:
-                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0))]
-
+                self.porte = [(x0[z] + i, y0[z] + j) for i in range(-1, 2) for j in range(-1, 2) for z in range(len(x0)) if (i, j) != (0, 0)]
+                self.attractor = [(x0[z], y0[z]) for z in range(len(x0))]
         else:
             self.porte = porte
         if not mur:
@@ -207,6 +227,8 @@ class Grille:
             self.grille[y][x].current_state = TYPE_CELL.PORTE
         for (x, y) in self.productor:
             self.grille[y][x].current_state = TYPE_CELL.PRODUCTOR
+        for (x, y) in self.attractor:
+            self.grille[y][x].current_state = TYPE_CELL.ATTRACTOR
 
 
     def cellule(self, x, y) -> Cell:
@@ -271,6 +293,11 @@ class Grille:
     def get_cellules(self):
         return [cell for cells in self.grille for cell in cells]
 
+
+    def change_distance(self, x0, y0):
+        for cell in self.get_cellules():
+            cell.distance = [math.sqrt((x0[i] - cell.x)**2 + (y0[i] - cell.y)**2) for i in range(len(x0))]
+            
     def recuperer_voisins(self, x, y):
         voisin_positions = [
                     (x, y - 1),
@@ -510,6 +537,15 @@ class Simulation:
                     self.map.add_productor(x, y)
                 case ACTIONS.ADDING_EMPTY:
                     cell.empty()
+                case ACTIONS.CHANGE_ATTRACTOR1:
+                    cell.change_attractor(0)
+                case ACTIONS.CHANGE_ATTRACTOR2:
+                    cell.change_attractor(1)
+                case ACTIONS.CHANGE_ATTRACTOR3:
+                    cell.change_attractor(2)
+                case ACTIONS.CHANGE_ATTRACTOR4:
+                    cell.change_attractor(3)
+
             cell.draw(self.fenetre)
                 
         
@@ -548,6 +584,14 @@ class Simulation:
                         action = ACTIONS.ADDING_PRODUCTORS
                     elif event.key == pg.K_e:
                         action = ACTIONS.ADDING_EMPTY
+                    elif event.key == pg.K_1:
+                        action = ACTIONS.CHANGE_ATTRACTOR1
+                    elif event.key == pg.K_2:
+                        action = ACTIONS.CHANGE_ATTRACTOR2
+                    elif event.key == pg.K_3:
+                        action = ACTIONS.CHANGE_ATTRACTOR3
+                    elif event.key == pg.K_4:
+                        action = ACTIONS.CHANGE_ATTRACTOR4
 
                 elif event.type == pg.MOUSEBUTTONUP:
                     mouse_held = False

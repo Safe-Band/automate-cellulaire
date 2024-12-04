@@ -376,6 +376,14 @@ class Game:
                     simulation.map.add_productor(x, y)
                 case ACTIONS.ADDING_EMPTY:
                     cell.empty()
+                case ACTIONS.CHANGE_ATTRACTOR1:
+                    cell.change_attractor(0)
+                case ACTIONS.CHANGE_ATTRACTOR2:
+                    cell.change_attractor(1)
+                case ACTIONS.CHANGE_ATTRACTOR3:
+                    cell.change_attractor(2)
+                case ACTIONS.CHANGE_ATTRACTOR4:
+                    cell.change_attractor(3)
             cell.draw(simulation.fenetre)
         
 
@@ -411,6 +419,14 @@ class Game:
                         action = ACTIONS.ADDING_PRODUCTORS
                     elif event.key == pg.K_e:
                         action = ACTIONS.ADDING_EMPTY
+                    elif event.key == pg.K_1:
+                        action = ACTIONS.CHANGE_ATTRACTOR1
+                    elif event.key == pg.K_2:
+                        action = ACTIONS.CHANGE_ATTRACTOR2
+                    elif event.key == pg.K_3:
+                        action = ACTIONS.CHANGE_ATTRACTOR3
+                    elif event.key == pg.K_4:
+                        action = ACTIONS.CHANGE_ATTRACTOR4
                 elif event.type == pg.MOUSEBUTTONUP:
                     mouse_held = False
                 
