@@ -1,3 +1,14 @@
+""" UI filr for the game of life simulation
+
+This file contains the Game class that manages the game loop and the display of the game.
+It uses the simulation.py file that contain more of the behaviorial code for the simulation
+to run the simulation and display it on the screen.
+
+Creation date : 14 november 2024
+Last update : 14 november 2024  
+
+"""
+
 import pygame as pg
 import sys
 import random
