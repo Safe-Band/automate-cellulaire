@@ -10,14 +10,19 @@ On peut, pour le moment ajouter 4 groupes de personnes distinctes chaque groupe 
 ## Installation
 
 1. Clonez le dépôt :
+
    git clone -url-du-repo-
 2. créez un environnement virtuel :
+
    python3 -m venv env
 3. Activez l'environnement virtuel :
+
     source env/bin/activate
 4. Installez les dépendances :
+
     pip install -r requirements.txt
 5. Lancez le programme :
+
     python3 game.py
 
 ## Utilisation
@@ -36,7 +41,7 @@ Les modes de création de grille sont les suivants :
     - 3 : Déplace l'objectif 3
     - 4 : Déplace l'objectif 4
 
-Durant la simulation, on peut utiliser les touches suivantes :
+- Durant la simulation, on peut utiliser les touches suivantes :
     - Echap : Quitter la simulation
     - P : Place un automate
     - W : Place un mur
@@ -56,7 +61,7 @@ Durant la simulation, on peut utiliser les touches suivantes :
     - 7 + shift : Change des cellules des groupes 1, 2, 4 en groupe 3
     - 6 + shift : Change des cellules des groupes 1, 2, 3 en groupe 4
 
-Paramètres de la simulation :
+- Paramètres de la simulation :
     - colonnes : nombre de colonnes de la grille
     - lignes : nombre de lignes de la grille
     - eta : Coefficient dirigeant les automates vers leur objectif, plus eta est grand, plus les automates sont attirés par leur objectif
