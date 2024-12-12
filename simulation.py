@@ -526,8 +526,8 @@ class Player:
             if self.grille.grad_matrix is not None:
                 for j, voisin in enumerate(voisins_valides):
                     H[j] += self.grille.grad_matrix[voisin.x][voisin.y]
-            if nu*self.inertie < 10:
-                inertia = nu*self.inertie
+            if nu * self.inertie < 10:
+                inertia = nu * self.inertie
             else:
                 inertia = 10
             if len(list_i) > 0:
