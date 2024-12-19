@@ -188,6 +188,8 @@ class Game:
             "Diff": 0,
             "Decay": 0,
             "show_gradient": 0,
+            "change_class": 0.001,
+
         }
 
         self.colors = {
@@ -417,6 +419,16 @@ class Game:
                 active_color=self.colors["hover"],
                 text=str(self.param["show_gradient"]),
             ),
+            "change_class": TextInput(
+                x=self.SCREEN_WIDTH // 2 - 500,
+                y=650,
+                width=200,
+                height=40,
+                font=input_font,
+                color=self.colors["text"],
+                active_color=self.colors["hover"],
+                text=str(self.param["change_class"]),
+            ),
         }
         # Button dimensions and positions
         button_width, button_height = 200, 60
@@ -503,7 +515,8 @@ class Game:
                 float(self.param["change_place"]),
                 float(self.param["Diff"]),
                 float(self.param["Decay"]),
-                bool(self.param["show_gradient"]),
+                bool(int(self.param["show_gradient"])),
+                float(self.param['change_class'])
             )
 
         if self.state == "Random":

@@ -234,15 +234,16 @@ class Cell:
                     )
             case TYPE_CELL.VIDE:
                 if self.grille.show_gradient:
+                    
                     pg.draw.rect(
                         fenetre,
                         (
-                            max(0, 255 - self.grille.grad_matrix[self.x][self.y] * 25),
+                            max(0, 255),
                             max(
                                 0,
                                 255 - self.grille.Dynamic_Field[0][self.x][self.y] * 25,
                             ),
-                            (max(0, 255 - self.distance[0] * 1)),
+                            (max(0, 255)),
                         ),
                         (
                             self.x * self.taille,
@@ -467,7 +468,8 @@ class Grille:
         change_place=0,
         Diff=0,
         Decay=0,
-        show_gradient=False,
+        show_gradient = False,
+        change_class = 0.001
     ):
         screen_info = pg.display.Info()
         self.SCREEN_WIDTH = screen_info.current_w
@@ -496,6 +498,7 @@ class Grille:
             self.decay = Decay
         self.Diff = Diff
         self.exit = exit
+        self.change_class = change_class
         self.tomato_flag = False
         self.Dynamic_Field = np.array(
             [
@@ -558,7 +561,7 @@ class Grille:
             self.grille[y][x].current_state = TYPE_CELL.PRODUCTOR
 
     def cellule(self, x, y) -> Cell:
-        return self.grille[y][x]
+        return self.grille[int(y)][int(x)]
 
     def gradient_obstacle(self, grad_coeff, elarg) -> np.array:
         gradient = np.zeros((self.nb_colonnes, self.nb_lignes))
@@ -744,9 +747,10 @@ class Player:
         cell.player = self
         if not cell.current_state == TYPE_CELL.PRODUCTOR:
             cell.current_state = TYPE_CELL.OCCUPED
-        self.inertie = 0
-        if self.grille.Diff != 0:
+        if self.grille.Diff != 0 and self.inertie == 0:
             self.add_Field()
+        self.inertie = 0
+        
 
     def exchange(self, cell: Cell):
         temp_player = cell.player
@@ -754,6 +758,10 @@ class Player:
         self.current_cell.player = temp_player
         temp_player.current_cell = self.current_cell
         self.current_cell = cell
+    
+    def random_change(self):
+        self.classe = random.choice(range(len(self.grille.x0)))
+        self.change_color()
 
     def inertia_and_grad(self, H, nu, voisins_valides):
         list_i = []
@@ -794,7 +802,7 @@ class Player:
             H = np.array(
                 [
                     voisin.distance[self.classe]
-                    - 0.5 * self.grille.Dynamic_Field[self.classe][voisin.x][voisin.y]
+                    - 0.75 * self.grille.Dynamic_Field[self.classe][voisin.x][voisin.y]
                     for voisin in voisins_valides
                 ]
             )
@@ -950,7 +958,8 @@ class Simulation:
         change_place=0,
         Diff=0,
         Decay=0,
-        show_gradient=False,
+        show_gradient = False,
+        change_class = 0.001
     ):
         self.fenetre = fenetre
         screen_info = pg.display.Info()
@@ -980,7 +989,8 @@ class Simulation:
             change_place=change_place,
             Diff=Diff,
             Decay=Decay,
-            show_gradient=show_gradient,
+            show_gradient = show_gradient,
+            change_class = change_class
         )
         self.cells = self.map.get_cellules()
 
@@ -1077,6 +1087,8 @@ class Simulation:
 
     def apply_rules(self, eta, nu):
         for player in self.map.players:
+            if random.random() < self.map.change_class:
+                player.random_change()
             if not player.is_arrived:
                 player.apply_rules(eta=eta, nu=nu)
             else:
@@ -1086,6 +1098,7 @@ class Simulation:
                 self.map.add_player(produc[0], produc[1])
 
     def apply_rules_parallel(self, eta, mu, nu):
+        
         if self.map.Diff != 0:
             self.map.decay_Field()
             self.map.diffusion_Field()
@@ -1094,6 +1107,8 @@ class Simulation:
             [[] for _ in range(self.map.nb_lignes)] for _ in range(self.map.nb_colonnes)
         ]
         for player in self.map.players:
+            if random.random() < self.map.change_class:
+                player.random_change()
             if not player.is_arrived:
                 player.apply_rules_parallel(
                     eta=eta, matrice_conflit=matrice_conflit, nu=nu
