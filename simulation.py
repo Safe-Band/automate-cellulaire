@@ -253,14 +253,14 @@ class Grille:
         self.grad_matrix = None
         self.x0 = x0
         self.y0 = y0
-        self.taille_cellule = min(self.SCREEN_WIDTH // nb_colonnes, self.SCREEN_HEIGHT // nb_lignes)
+        self.taille_cellule = min(self.SCREEN_WIDTH // nb_colonnes, (self.SCREEN_HEIGHT *0.9 ) // nb_lignes)
         self.change_place = change_place
         self.grille = [[Cell(x, y, self.taille_cellule,self) for x in range(nb_colonnes)] for y in range(nb_lignes)]
         self.players = []
         self.productor = []
         self.attractor = []
-        self.decay = 0.3
-        self.Diff = None
+        self.decay = 0.1
+        self.Diff = 0.1
         self.exit = exit
         self.tomato_flag = False
         self.Dynamic_Field = np.array([[[0 for _ in range(nb_lignes)] for _ in range(nb_colonnes)] for _ in range(len(x0))])
@@ -427,7 +427,7 @@ class Grille:
             )
 
             # Mise à jour du champ dynamique avec l'équation de diffusion
-            new_field[k] = self.Diff * sum_voisins + self.Dynamic_Field[k]
+            new_field[k] = self.Diff * sum_voisins / 4 + self.Dynamic_Field[k]
 
         # Remplacement du champ par le nouveau champ mis à jour
         self.Dynamic_Field = new_field
@@ -562,6 +562,11 @@ class Player:
 
 
     def apply_rules(self, eta, nu):
+        
+        #Diffusion
+        if self.grille.Diff:
+            self.grille.decay_Field()
+            self.grille.diffusion_Field()
         # Obtenir une liste des cellules actives et la mélanger aléatoirement
         # active_cells = [cell for row in self.grille for cell in row if cell.etat]
         # random.shuffle(active_cells)
@@ -593,6 +598,7 @@ class Player:
 #Pour faire le parallèle, créer la matrice de conflit puis la gérer dans la boucle de grille/simu à voir
 
     def apply_rules_parallel(self, eta, matrice_conflit, nu):
+        
         #Diffusion
         if self.grille.Diff:
             self.grille.decay_Field()
