@@ -77,6 +77,10 @@ Les modes de création de grille sont les suivants :
   - coeff_prod : Coefficient de production de nouvelles cellules, plus coeff_prod est grand, plus de nouvelles cellules sont produites
   - exit : 1 pour activer la sortie, 0 sinon
   - change_place : Probabilité que 2 cellules voulant échanger de places le fassent
+  - Diff : Coefficient de diffusion du champ dynamique, plus Diff est grand, plus le champ dynamique se diffuse rapidement
+  - Decay : Coefficient de décroissance du champ dynamique, plus Decay est grand, plus le champ dynamique se diffuse lentement
+  - show_grad : 1 pour afficher le champ dynamique, 0 sinon
+  - change_class : probabilité qu'une cellule change de classe
 
 ## Fonctionnement de l'automate cellulaire
 
