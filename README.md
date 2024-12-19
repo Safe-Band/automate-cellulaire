@@ -11,19 +11,19 @@ On peut, pour le moment ajouter 4 groupes de personnes distinctes chaque groupe 
 
 1. Clonez le dépôt :
 
-   git clone -url-du-repo-
+   `git clone -url-du-repo-`
 2. créez un environnement virtuel :
 
-   python3 -m venv env
+   `python3 -m venv env`
 3. Activez l'environnement virtuel :
 
-    source env/bin/activate
+    `source env/bin/activate`
 4. Installez les dépendances :
 
-    pip install -r requirements.txt
+    `pip install -r requirements.txt`
 5. Lancez le programme :
 
-    python3 game.py
+    `python3 game.py`
 
 ## Utilisation
 
