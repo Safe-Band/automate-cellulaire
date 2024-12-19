@@ -151,8 +151,11 @@ Une **diffusion** du champ est également appliquée pour simuler la propagation
 
 Cela permet de simuler des comportements réalistes, où les gens suivent des chemins déjà tracés par d’autres.
 
-La formule de diffusion est la suivante : `champ(t+1) = champ(t) * (1 - Diffusion) + Diffusion * moyenne_voisins(champ(t))`, où `moyenne_voisins` est la moyenne des champs des voisins de la cellule.
-Lorsqu'un joueur passe sur une cellule, le champ est augmenté de 1.
+La formule de diffusion est la suivante : `champ(t+1) = champ(t) * (1 - Decay) + Diffusion * moyenne_voisins(champ(t))`, où `moyenne_voisins` est la moyenne des champs des voisins de la cellule.
+Lorsqu'un joueur passe sur une cellule, le champ est augmenté.
+La moyenne des voisins est calculé à l'aide d'une convolution.
+
+Si on met Decay sur 0, une valeur nominale égale à `1.1*Diffusion` sera appliquée
 
 Peut être désactiver et plus ou moins amplifié en mettant le paramètre Diffusion à 0.
 
