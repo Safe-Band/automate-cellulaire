@@ -636,6 +636,37 @@ class Grille:
             if 0 <= x < self.nb_colonnes and 0 <= y < self.nb_lignes
         ]
         return voisins
+    
+    def recuperer_densite(self, x, y, size=5):
+        width = size // 2
+        voisins = [
+            (i, j)
+            for i in range(x - width, x + width + 1)
+            for j in range(y - width, y + width + 1)
+            if (0 <= i < self.nb_colonnes and 0 <= j < self.nb_lignes)
+            if self.cellule(i, j).is_occuped() or self.cellule(i, j).is_empty()
+        ]
+        if len(voisins) <= 5:
+            return 0
+        densite = sum(1 for i, j in voisins if (self.cellule(i, j).is_occuped()))
+        densite *= 10/len(voisins)
+        return densite
+
+    def recuperer_max_densite_grille(self):
+        max_densite = 0
+        densite = 0
+        x_max,y_max=0,0
+        for x in range(self.nb_colonnes):
+            for y in range(self.nb_lignes):
+                if self.cellule(x, y).is_occuped() or self.cellule(x, y).is_empty():
+                    densite = self.recuperer_densite(x, y, size=7)
+                if densite > max_densite:
+                    max_densite = densite
+                    x_max, y_max=x,y
+                    if max_densite == 10:
+                        return max_densite, (x_max, y_max)
+        print(max_densite)
+        return max_densite, (x_max,y_max)
 
     def delete_class(self, classe):
         for player in self.players:
@@ -1130,8 +1161,36 @@ class Simulation:
     def pass_epoch(self):
         for cell in self.cells:
             cell.pass_epoch()
+    
+    def draw_max_densite(self, fenetre):
+        if not hasattr(self, 'max_density'):
+            self.max_density = 0
+            return
+        self.max_density, (x_densite, y_densite) = self.map.recuperer_max_densite_grille()
+        
+        # draw max density
+        overlay = pg.Surface((self.map.taille_cellule, self.map.taille_cellule), pg.SRCALPHA)
+        overlay.fill((255, 255, 0, 100))  # RGBA color with 100 alpha for 40% opacity
+        fenetre.blit(overlay, (x_densite * self.map.taille_cellule, y_densite * self.map.taille_cellule))
+
+        # draw surrounding rectangle
+        rect_size = 7
+        half_rect = rect_size // 2
+        x_start = max(0, x_densite - half_rect)
+        y_start = max(0, y_densite - half_rect)
+        x_end = min(self.map.nb_colonnes, x_densite + half_rect + 1)
+        y_end = min(self.map.nb_lignes, y_densite + half_rect + 1)
+
+        overlay = pg.Surface((self.map.taille_cellule * (x_end - x_start), self.map.taille_cellule * (y_end - y_start)), pg.SRCALPHA)
+        overlay.fill((255, 255, 0, 50))  # RGBA color with 50 alpha for 20% opacity
+        fenetre.blit(overlay, (x_start * self.map.taille_cellule, y_start * self.map.taille_cellule))
 
     def draw(self, fenetre):
+        # clear the screen
+        fenetre.fill((255, 255, 255))
+
         # draw players
         for cell in self.cells:
             cell.draw(fenetre)
+
+        self.draw_max_densite(fenetre)
