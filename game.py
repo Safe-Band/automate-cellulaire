@@ -641,6 +641,13 @@ class Game:
             simulation.draw(fenetre)
             back_to_menu_button.draw(fenetre)
 
+            # Display max density
+            density_font = pg.font.Font(None, 36)
+            density_text = density_font.render(
+                f"Densité maximale à cet instant: {simulation.max_density:.2f}", True, self.colors["text"]
+            )
+            fenetre.blit(density_text, (self.SCREEN_WIDTH - density_text.get_width() - 20, self.SCREEN_HEIGHT - 100))
+
             # Event handling
             if self.handle_events([back_to_menu_button], None, None) == "Back to Menu":
                 running = False
