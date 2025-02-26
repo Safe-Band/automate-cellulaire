@@ -116,8 +116,7 @@ Où :
 
 - `P(cellule)` est la probabilité d’aller dans la cellule.
 - `score(cellule)` est le score associé à la cellule.
-- `T` est un paramètre de température qui contrôle la dispersion des probabilités. Plus `T` est grand, plus les probabilités son
-- t uniformes.
+- `T` est un paramètre de température qui contrôle la dispersion des probabilités. Plus `T` est grand, plus les probabilités sont uniformes.
   
 T est calculé comme suit : (self.grille.nb_colonnes + self.grille.nb_lignes)**0.3
 Cela permet premièrement de faire des grilles de n'importe quelle taille, car, lorsque la grille est trop grande, certaines cellules ont des probabilités qui ne sont pas calculées à cause de la limite de calcul de la fonction exponentielle. De plus, cela permet de ne pas avoir des probabilités trop faibles, car, si T est trop grand, les probabilités sont trop proches les unes des autres et le mouvement est stochastique.
