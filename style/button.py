@@ -47,3 +47,9 @@ class Button:
                 self.rect.centery - button_text.get_height() // 2,
             ),
         )
+
+    def handle_event(self, event):
+        if event.type == pg.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                return True
+        return False
